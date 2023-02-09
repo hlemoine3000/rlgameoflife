@@ -9,4 +9,4 @@ cd $SCRIPT_DIR/..
 PROJECT_NAME=rlgameoflife
 
 docker build -t $PROJECT_NAME .
-docker run -it -v $(pwd):/$PROJECT_NAME $PROJECT_NAME bash
+docker run -it -u "$(id -u):$(id -g)" -v $(pwd):/$PROJECT_NAME $PROJECT_NAME bash

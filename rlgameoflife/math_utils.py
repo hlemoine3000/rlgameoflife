@@ -6,17 +6,17 @@ class Vector2D:
         self.vector = np.array([x, y])
 
     @property
-    def x(self):
+    def x(self) -> float:
         return self.vector[0]
 
     @property
-    def y(self):
+    def y(self) -> float:
         return self.vector[1]
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"Vector2D({self.vector[0]}, {self.vector[1]})"
 
-    def magnitude(self):
+    def magnitude(self) -> float:
         return np.linalg.norm(self.vector)
 
     def normalize(self):
@@ -31,13 +31,13 @@ class Vector2D:
     def subtract(self, other):
         return Vector2D(*(self.vector - other.vector))
 
-    def dot(self, other):
+    def dot(self, other) -> float:
         return np.dot(self.vector, other.vector)
 
-    def cross(self, other):
+    def cross(self, other) -> float:
         return self.vector[0] * other.vector[1] - self.vector[1] * other.vector[0]
 
-    def angle_between(self, other):
+    def angle_between(self, other) -> float:
         return np.arccos(
             np.clip(
                 np.dot(self.normalize().vector, other.normalize().vector), -1.0, 1.0
