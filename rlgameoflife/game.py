@@ -1,4 +1,5 @@
 import datetime
+import json
 import logging
 import os
 import random
@@ -10,9 +11,10 @@ from rlgameoflife import math_utils
 
 
 class World:
-    def __init__(self, output_dir: str) -> None:
+    def __init__(self, total_ticks: int, output_dir: str) -> None:
         self._logger = logging.getLogger(__class__.__name__)
 
+        self.total_ticks = total_ticks
         now = datetime.datetime.now()
         self._output_dir = os.path.join(output_dir, now.strftime("%m%d%Y%H%M%S"))
 
@@ -23,15 +25,13 @@ class World:
                     math_utils.Vector2D(100, 100), math_utils.Vector2D(1.0, 0), 0
                 )
             ],
-            "creature_group"
+            "creature_group",
         )
         self.food_group = entities.EntityGroup(
-            [entities.Food(math_utils.Vector2D(500, 500), 0)],
-            "food_group"
+            [entities.Food(math_utils.Vector2D(500, 500), 0)], "food_group"
         )
         self.entities_group = entities.EntityGroup(
-            [self.creature_group, self.food_group],
-            "all_entities_group"
+            [self.creature_group, self.food_group], "all_entities_group"
         )
 
         self._tick = 0
@@ -44,7 +44,8 @@ class World:
                 math_utils.Vector2D(
                     random.randint(5, self.boundaries.x - 5),
                     random.randint(5, self.boundaries.y - 5),
-                ), 0
+                ),
+                0,
             )
         )
 
@@ -72,20 +73,35 @@ class World:
 
     def move(self) -> None:
         self.creature_move()
-    
+
     def save_history(self) -> None:
-        history_output_dir = os.path.join(self._output_dir, 'history')
-        self._logger.info(f'Save simulation history at {history_output_dir}')
+        history_output_dir = os.path.join(self._output_dir, "history")
+        self._logger.info(f"Save simulation history at {history_output_dir}")
         self.entities_group.save_history(history_output_dir)
 
-    def simulate(self, total_ticks: int):
+    def save_parameters(self) -> None:
+        parameters_filepath = os.path.join(self._output_dir, "parameters.json")
+        parameters_dict = {
+            "total_ticks": self.total_ticks,
+            "boundaries": {"x": self.boundaries.x, "y": self.boundaries.y},
+        }
+        self._logger.info(f"Save simulation parameters at {parameters_filepath}")
+        os.makedirs(self._output_dir, exist_ok=True)
+        with open(parameters_filepath, "w") as parameters_file:
+            json.dump(parameters_dict, parameters_file, indent=4)
+
+    def save_simulation(self) -> None:
+        self.save_parameters()
+        self.save_history()
+
+    def simulate(self):
         self._tick = 0
-        pbar = tqdm.tqdm(range(total_ticks))
+        pbar = tqdm.tqdm(range(self.total_ticks))
         for tick in pbar:
             self._tick = tick
             self.events()
             self.move()
             self.update_groups()
 
-        self.save_history()
-        self._logger.info('Simulation complete.')
+        self.save_simulation()
+        self._logger.info("Simulation complete.")

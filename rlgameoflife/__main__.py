@@ -4,6 +4,7 @@ import logging
 import tqdm
 
 from rlgameoflife import game
+from rlgameoflife import visualisation
 
 
 class TqdmLoggingHandler(logging.Handler):
@@ -27,10 +28,13 @@ def argument_parser():
     """
     parser = argparse.ArgumentParser(description="Train agents in simulation.")
     parser.add_argument(
-        "-i", "--iterations", help="Number of iterations to run.", default=20
+        "-i", "--iterations", help="Number of iterations to run.", default=600
     )
     parser.add_argument(
-        "-o", "--output", help="Output Directory to store the simulation artifacts.", default="outputs"
+        "-o",
+        "--output",
+        help="Output Directory to store the simulation artifacts.",
+        default="outputs",
     )
     parser.add_argument(
         "-s",
@@ -38,7 +42,13 @@ def argument_parser():
         help="Launch simulation and train agents.",
         action="store_true",
     )
-    parser.add_argument("-v", "--verbose", help="Verbose mode.", action="store_true")
+    parser.add_argument("-d", "--debug", help="Enable debug logs.", action="store_true")
+    parser.add_argument(
+        "-v",
+        "--visualize",
+        help="Create a video from a simulation history.",
+        default=None,
+    )
 
     return parser
 
@@ -47,7 +57,7 @@ def main():
     args = argument_parser().parse_args()
 
     main_logger = logging.getLogger()
-    logging_level = logging.DEBUG if args.verbose else logging.INFO
+    logging_level = logging.DEBUG if args.debug else logging.INFO
     main_logger.setLevel(logging_level)
     tqdm_handler = TqdmLoggingHandler()
     tqdm_handler.setFormatter(
@@ -55,8 +65,11 @@ def main():
     )
     main_logger.addHandler(tqdm_handler)
     if args.simulate:
-        my_world = game.World(args.output)
-        my_world.simulate(args.iterations)
+        my_world = game.World(args.iterations, args.output)
+        my_world.simulate()
+
+    if args.visualize:
+        visualisation.visualize_simulation(args.visualize)
 
 
 main()
