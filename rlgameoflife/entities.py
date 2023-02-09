@@ -22,21 +22,60 @@ class EntityState(enum.Enum):
     ALIVE = 2
 
 
+class EntityHistoryLoader:
+    def __init__(self) -> None:
+        self._history_np = None
+
+    @property
+    def history(self):
+        return self._history_np
+
+    def add(
+        self,
+        tick: int,
+        pos: math_utils.Vector2D,
+        dir: math_utils.Vector2D,
+        entity_type: EntityType,
+        entity_state: EntityState,
+    ) -> None:
+        history_np = np.concatenate(
+            (
+                np.array([tick]),
+                pos.vector,
+                dir.vector,
+                np.array([entity_type, entity_state]),
+            )
+        )
+        if self._history_np is None:
+            self._history_np = history_np
+            return
+        self._history_np = np.vstack((self._history_np, history_np))
+
+    def save(self, output_filepath: str) -> None:
+        os.makedirs(os.path.dirname(output_filepath), exist_ok=True)
+        with open(output_filepath, "wb") as entity_file:
+            np.save(entity_file, self._history_np, allow_pickle=True)
+
+    def load(self, filepath: str) -> None:
+        with open(filepath, "rb") as f:
+            self._history_np = np.load(f, allow_pickle=True)
+
+
 class EntityObject:
     def __init__(self, name: str) -> None:
         self._logger = logging.getLogger(__class__.__name__)
         self._name = name
-    
+
     @property
     def name(self):
         return self._name
-    
+
     def update(self) -> None:
-        self._logger.warning(f'not implemented')
+        self._logger.warning(f"not implemented")
         pass
 
     def save_history(self, output_dir: str) -> None:
-        self._logger.warning(f'not implemented')
+        self._logger.warning(f"not implemented")
         pass
 
 
@@ -64,8 +103,8 @@ class BaseEntity(EntityObject):
         self.max_angle = max_angle
 
         # Initialise entity history at tick -1
-        self._tick = tick - 1
-        self._history = self._history_array()
+        self._history = EntityHistoryLoader()
+        self._history.add(tick - 1, pos, dir, entity_type, entiy_state)
         self._tick = tick
 
     @property
@@ -75,16 +114,6 @@ class BaseEntity(EntityObject):
     @property
     def direction(self) -> math_utils.Vector2D:
         return self._direction
-
-    def _history_array(self) -> np.array:
-        return np.concatenate(
-            (
-                self._tick,
-                self._position.vector,
-                self._direction.vector,
-                np.array([self._entity_type, self._entiy_state]),
-            )
-        )
 
     def move(self, mov: math_utils.Vector2D) -> None:
         movement = copy.copy(mov)
@@ -100,27 +129,34 @@ class BaseEntity(EntityObject):
 
         # Calculate movement
         self._direction = self._direction.rotate(movement_angle).normalize()
-        self._next_position = self._position.add(self._direction.scale(movement_distance))
+        self._next_position = self._position.add(
+            self._direction.scale(movement_distance)
+        )
 
     def flush_move(self) -> None:
         self._next_position = self._position
 
     def update(self) -> None:
         self._position = self._next_position
-        self._history = np.vstack((self._history, self._history_array()))
+        self._history.add(
+            self._tick,
+            self._position,
+            self._direction,
+            self._entity_type,
+            self._entiy_state,
+        )
         self._tick += 1
-    
+
     def save_history(self, output_dir: str) -> None:
-        os.makedirs(output_dir, exist_ok=True)
-        filepath = os .path.join(output_dir, f'{self._name}.npy')
-        with open(filepath, 'wb') as entity_file:
-            np.save(entity_file, self._history)
+        self._history.save(os.path.join(output_dir, f"{self._name}.npy"))
 
 
 class Creature(BaseEntity):
-    def __init__(self, pos: math_utils.Vector2D, dir: math_utils.Vector2D, tick: int) -> None:
+    def __init__(
+        self, pos: math_utils.Vector2D, dir: math_utils.Vector2D, tick: int
+    ) -> None:
         global CREATURE_INDEX
-        name = f'creature_{CREATURE_INDEX}'
+        name = f"creature_{CREATURE_INDEX}"
         CREATURE_INDEX += 1
         super().__init__(
             pos,
@@ -130,23 +166,23 @@ class Creature(BaseEntity):
             entiy_state=EntityState.ALIVE,
             max_speed=2.0,
             max_angle=0.02,
-            name=name
+            name=name,
         )
 
 
 class Food(BaseEntity):
     def __init__(self, pos: math_utils.Vector2D, tick: int) -> None:
         global FOOD_INDEX
-        name = f'food_{FOOD_INDEX}'
+        name = f"food_{FOOD_INDEX}"
         super().__init__(
             pos,
-            math_utils.Vector2D(1., 0.),
+            math_utils.Vector2D(1.0, 0.0),
             tick,
             entity_type=EntityType.ITEM,
             entiy_state=EntityState.ALIVE,
             max_speed=0.0,
             max_angle=0.02,
-            name=name
+            name=name,
         )
 
 
@@ -175,7 +211,7 @@ class EntityGroup(EntityObject):
 
     def __len__(self) -> int:
         return len(self._entity_list)
-    
+
     def __getitem__(self, item) -> EntityObject:
         if type(item) is int:
             return self._entity_list[item]
