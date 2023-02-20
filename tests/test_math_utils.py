@@ -50,11 +50,18 @@ def test_cross():
     c = v1.cross(v2)
     assert c == -2.0
 
-def test_angle_between():
-    v1 = math_utils.Vector2D(1, 0)
-    v2 = math_utils.Vector2D(0, 1)
+@pytest.mark.parametrize("vx1, vy1, vx2, vy2, expected", [
+    (1, 0, 0, 1, np.pi/2),
+    (1, 0, 1, 0, 0),
+    (1, 1, -1, 1, np.pi/2),
+    (1, 0, 0, -1, -np.pi/2),
+    (1, 0, -1, 0, np.pi),
+])
+def test_angle_between(vx1, vy1, vx2, vy2, expected):
+    v1 = math_utils.Vector2D(vx1, vy1)
+    v2 = math_utils.Vector2D(vx2, vy2)
     angle = v1.angle_between(v2)
-    assert np.isclose(angle, np.pi / 2)
+    assert np.isclose(angle, expected, atol=1e-6)
 
 @pytest.mark.parametrize("vx, vy, angle, ex, ey", [
     (1, 0, np.pi/2, 0, 1),

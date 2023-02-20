@@ -37,12 +37,15 @@ class Vector2D:
     def cross(self, other) -> float:
         return self.vector[0] * other.vector[1] - self.vector[1] * other.vector[0]
 
-    def angle_between(self, other) -> float:
-        return np.arccos(
-            np.clip(
-                np.dot(self.normalize().vector, other.normalize().vector), -1.0, 1.0
-            )
-        )
+    def angle_between(self, other):
+        dot = np.dot(self.vector, other.vector)
+        det = np.linalg.det([self.vector, other.vector])
+        angle = np.arctan2(det, dot)
+        if angle < -np.pi:
+            angle += 2 * np.pi
+        elif angle > np.pi:
+            angle -= 2 * np.pi
+        return angle
 
     def rotate(self, angle):
         c, s = np.cos(angle), np.sin(angle)
