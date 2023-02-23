@@ -58,7 +58,7 @@ class World:
     def events(self) -> None:
         for event in self.tick_events.get():
             if event == events.EventType.SPAWN_FOOD_EVENT:
-                self._logger.info("Spawning food.")
+                self.spawn_food()
         self.tick_events.update()
 
     def update_groups(self) -> None:
