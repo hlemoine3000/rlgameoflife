@@ -46,13 +46,11 @@ class Visualizer:
                 ax.plot(pos[0], pos[1], marker="o", markersize=5, color=color)
                 ax.annotate(entity_name, pos)
 
-        self._logger.info("Build animation.")
         anim = animation.FuncAnimation(
-            fig, update, frames=list(history_dict.keys()), interval=50
+            fig, update, frames=list(history_dict.keys()), interval=1
         )
-        self._logger.info("Save animation.")
         anim.save(
             os.path.join(self._simulation_dir_path, "entities_history.gif"),
             writer="PillowWriter",
-            fps=60,
+            fps=30,
         )
