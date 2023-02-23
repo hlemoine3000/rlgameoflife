@@ -7,8 +7,18 @@ import os
 from rlgameoflife import math_utils
 
 
-CREATURE_INDEX = 0
-FOOD_INDEX = 0
+class EnittyIndexer:
+    def __init__(self) -> None:
+        self._index = 0
+
+    @property
+    def index(self) -> int:
+        _index = self._index
+        self._index += 1
+        return _index
+
+
+ENTITY_INDEXER = EnittyIndexer()
 
 
 class EntityType(enum.Enum):
@@ -30,17 +40,21 @@ class EntitiesHistoryLoader:
         dir: math_utils.Vector2D,
         entity_type: EntityType,
     ) -> None:
-        history_np = np.array(
-            [tick, *pos.vector, *dir.vector, entity_type.value]
-        )
+        history_np = np.array([tick, *pos.vector, *dir.vector, entity_type.value])
         if entity_name not in self._history_npd:
             self._history_npd[entity_name] = history_np[np.newaxis, :]
         else:
-            self._history_npd[entity_name] = np.vstack((self._history_npd[entity_name], history_np))
+            if tick in self._history_npd[entity_name][:,0]:
+                raise Exception('tick %i has already been added')
+            self._history_npd[entity_name] = np.vstack(
+                (self._history_npd[entity_name], history_np)
+            )
 
     def save(self) -> None:
         os.makedirs(self._output_dir, exist_ok=True)
-        with open(os.path.join(self._output_dir, f"entities_history.npz"), "wb") as entity_file:
+        with open(
+            os.path.join(self._output_dir, f"entities_history.npz"), "wb"
+        ) as entity_file:
             np.savez_compressed(entity_file, **self._history_npd)
 
     def load(self, filepath: str) -> None:
@@ -51,11 +65,11 @@ class EntitiesHistoryLoader:
 
     def get_history(self, entity_name: str):
         return self._history_npd.get(entity_name, None)
-    
+
     def get_total_ticks(self) -> int:
         total_ticks = 0
         for entity_np in self._history_npd.values():
-            total_ticks = int(np.amax(entity_np[:,0], initial=total_ticks))
+            total_ticks = int(np.amax(entity_np[:, 0], initial=total_ticks))
         return total_ticks
 
     def get_timed_history(self) -> dict:
@@ -68,14 +82,12 @@ class EntitiesHistoryLoader:
                 if len(event_np) == 0:
                     continue
                 if len(event_np) != 1:
-                    raise
-                if entity_name in timed_history_dict[tick]:
-                    raise
+                    raise Exception("Multiple position logged for tick %i", tick)
                 event_np = np.squeeze(event_np)
                 timed_history_dict[tick][entity_name] = {
                     "position": event_np[1:3],
                     "direction": event_np[3:5],
-                    "type": event_np[5]
+                    "type": event_np[5],
                 }
         return timed_history_dict
 
@@ -164,11 +176,14 @@ class BaseEntity(EntityObject):
 
 class Creature(BaseEntity):
     def __init__(
-        self, pos: math_utils.Vector2D, dir: math_utils.Vector2D, tick: int, history: EntitiesHistoryLoader
+        self,
+        pos: math_utils.Vector2D,
+        dir: math_utils.Vector2D,
+        tick: int,
+        history: EntitiesHistoryLoader,
     ) -> None:
-        global CREATURE_INDEX
-        name = f"creature_{CREATURE_INDEX}"
-        CREATURE_INDEX += 1
+        global ENTITY_INDEXER
+        name = f"creature_{ENTITY_INDEXER.index}"
         super().__init__(
             pos,
             dir,
@@ -182,9 +197,11 @@ class Creature(BaseEntity):
 
 
 class Food(BaseEntity):
-    def __init__(self, pos: math_utils.Vector2D, tick: int, history: EntitiesHistoryLoader) -> None:
-        global FOOD_INDEX
-        name = f"food_{FOOD_INDEX}"
+    def __init__(
+        self, pos: math_utils.Vector2D, tick: int, history: EntitiesHistoryLoader
+    ) -> None:
+        global ENTITY_INDEXER
+        name = f"food_{ENTITY_INDEXER.index}"
         super().__init__(
             pos,
             math_utils.Vector2D(1.0, 0.0),
@@ -255,6 +272,6 @@ class EntityGroup(EntityObject):
     def update(self) -> None:
         for entity in self._entity_list:
             entity.update()
-    
+
     def kill(self, entity_idx: int) -> None:
         self._entity_list.pop(entity_idx)
