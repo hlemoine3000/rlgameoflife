@@ -28,7 +28,7 @@ def argument_parser():
     """
     parser = argparse.ArgumentParser(description="Train agents in simulation.")
     parser.add_argument(
-        "-i", "--iterations", help="Number of iterations to run.", default=400
+        "-i", "--iterations", help="Number of iterations to run.", default=400, type=int
     )
     parser.add_argument(
         "-o",
