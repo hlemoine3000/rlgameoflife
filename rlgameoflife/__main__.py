@@ -28,7 +28,7 @@ def argument_parser():
     """
     parser = argparse.ArgumentParser(description="Train agents in simulation.")
     parser.add_argument(
-        "-i", "--iterations", help="Number of iterations to run.", default=600
+        "-i", "--iterations", help="Number of iterations to run.", default=400
     )
     parser.add_argument(
         "-o",
@@ -69,7 +69,8 @@ def main():
         my_world.simulate()
 
     if args.visualize:
-        visualisation.visualize_simulation(args.visualize)
+        my_vis = visualisation.Visualizer(args.visualize)
+        my_vis.make_gif()
 
 
 main()

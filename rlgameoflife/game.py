@@ -17,18 +17,23 @@ class World:
         self.total_ticks = total_ticks
         now = datetime.datetime.now()
         self._output_dir = os.path.join(output_dir, now.strftime("%m%d%Y%H%M%S"))
+        self._history = entities.EntitiesHistoryLoader(self._output_dir)
 
         self.boundaries = math_utils.Vector2D(1000.0, 1000.0)
         self.creature_group = entities.EntityGroup(
             [
                 entities.Creature(
-                    math_utils.Vector2D(100, 100), math_utils.Vector2D(1.0, 0), 0
+                    math_utils.Vector2D(100, 100),
+                    math_utils.Vector2D(1.0, 0),
+                    0,
+                    self._history,
                 )
             ],
             "creature_group",
         )
         self.food_group = entities.EntityGroup(
-            [entities.Food(math_utils.Vector2D(500, 500), 0)], "food_group"
+            [entities.Food(math_utils.Vector2D(500, 500), 0, self._history)],
+            "food_group",
         )
         self.entities_group = entities.EntityGroup(
             [self.creature_group, self.food_group], "all_entities_group"
@@ -46,6 +51,7 @@ class World:
                     random.randint(5, self.boundaries.y - 5),
                 ),
                 0,
+                self._history,
             )
         )
 
@@ -62,22 +68,29 @@ class World:
         if len(self.food_group) == 0:
             return
         for creature in self.creature_group:
-            nearest_food_distance = 10000
-            for food in self.food_group:
+            # Get nearest food.
+            nearest_food_distance = 100000
+            for food_idx, food in enumerate(self.food_group):
                 food_vector = creature.position.subtract(food.position)
                 food_distance = food_vector.magnitude()
                 if food_distance < nearest_food_distance:
                     nearest_food_distance = food_distance
                     nearest_food_vector = food_vector
+                    nearest_food_idx = food_idx
+
+            if nearest_food_distance < 5:
+                # Creature eat the food when near.
+                self.food_group.kill(nearest_food_idx)
+                return
+            # Creature move to nearest food.
             creature.move(nearest_food_vector)
 
     def move(self) -> None:
         self.creature_move()
 
     def save_history(self) -> None:
-        history_output_dir = os.path.join(self._output_dir, "history")
-        self._logger.info(f"Save simulation history at {history_output_dir}")
-        self.entities_group.save_history(history_output_dir)
+        self._logger.info(f"Save simulation history at {self._output_dir}")
+        self._history.save()
 
     def save_parameters(self) -> None:
         parameters_filepath = os.path.join(self._output_dir, "parameters.json")
