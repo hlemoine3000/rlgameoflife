@@ -37,10 +37,8 @@
 				"VisualStudioExptTeam.vscodeintellicode"
 			],
 			"settings": {
-				"[python]": {
-					"editor.defaultFormatter": "ms-python.black-formatter",
-					"editor.formatOnSave": true
-				  },
+				  "editor.defaultFormatter": "ms-python.black-formatter",
+				  "editor.formatOnSave": true,
 				  "workbench.colorCustomizations": {
 					"terminal.background":"#1D2021",
 					"terminal.foreground":"#A89984",
