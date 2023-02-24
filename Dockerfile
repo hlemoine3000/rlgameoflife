@@ -1,5 +1,8 @@
 FROM python:3.11.1-buster
 
+RUN apt update && apt upgrade -y && apt install -y \
+ffmpeg
+
 RUN python3 -m pip install --upgrade pip
 COPY requirements.txt .
 RUN pip3 install -r requirements.txt
