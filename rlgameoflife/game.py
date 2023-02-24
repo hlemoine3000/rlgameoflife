@@ -50,7 +50,7 @@ class World:
                     random.randint(5, self.boundaries.x - 5),
                     random.randint(5, self.boundaries.y - 5),
                 ),
-                0,
+                self._tick,
                 self._history,
             )
         )
