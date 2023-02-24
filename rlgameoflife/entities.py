@@ -22,7 +22,8 @@ ENTITY_INDEXER = EnittyIndexer()
 
 
 class EntityType(enum.Enum):
-    ITEM = 0
+    NOTHING = -1
+    FOOD = 0
     CREATURE = 1
 
 
@@ -43,8 +44,8 @@ class EntitiesHistoryLoader:
         if entity_name not in self._history_npd:
             self._history_npd[entity_name] = history_np[np.newaxis, :]
         else:
-            if tick in self._history_npd[entity_name][:,0]:
-                raise Exception('tick %i has already been added')
+            if tick in self._history_npd[entity_name][:, 0]:
+                raise Exception("tick %i has already been added")
             self._history_npd[entity_name] = np.vstack(
                 (self._history_npd[entity_name], history_np)
             )
@@ -92,13 +93,34 @@ class EntitiesHistoryLoader:
 
 
 class EntityObject:
-    def __init__(self, name: str) -> None:
+    def __init__(
+        self,
+        pos: math_utils.Vector2D,
+        dir: math_utils.Vector2D,
+        name: str,
+        entity_type: EntityType,
+    ) -> None:
         self._logger = logging.getLogger(__class__.__name__)
         self._name = name
+        self._entity_type = entity_type
+        self._direction = dir.normalize()
+        self._position = pos
 
     @property
     def name(self):
         return self._name
+
+    @property
+    def entity_type(self) -> EntityType:
+        return self._entity_type
+
+    @property
+    def position(self) -> math_utils.Vector2D:
+        return self._position
+
+    @property
+    def direction(self) -> math_utils.Vector2D:
+        return self._direction
 
     def update(self) -> None:
         self._logger.warning(f"not implemented")
@@ -112,17 +134,14 @@ class BaseEntity(EntityObject):
         dir: math_utils.Vector2D,
         tick: int,
         history: EntitiesHistoryLoader,
-        entity_type: EntityType = EntityType.ITEM,
+        entity_type: EntityType = EntityType.FOOD,
         max_speed: float = 1.0,
         max_angle: float = 0.02,  # radians
         name: str = "entity",
     ) -> None:
-        super().__init__(name)
+        super().__init__(pos, dir, name, entity_type)
         self._logger = logging.getLogger(__class__.__name__)
 
-        self._entity_type = entity_type
-        self._direction = dir.normalize()
-        self._position = pos
         self._next_position = pos
         self._max_speed = max_speed
         self.max_angle = max_angle
@@ -131,18 +150,6 @@ class BaseEntity(EntityObject):
         self._history = history
         self._history.add(self._name, tick - 1, pos, dir, entity_type)
         self._tick = tick
-
-    @property
-    def position(self) -> math_utils.Vector2D:
-        return self._position
-
-    @property
-    def direction(self) -> math_utils.Vector2D:
-        return self._direction
-
-    @property
-    def entity_type(self) -> EntityType:
-        return self._entity_type
 
     def move(self, mov: math_utils.Vector2D) -> None:
         movement = copy.copy(mov)
@@ -210,7 +217,7 @@ class Food(BaseEntity):
             math_utils.Vector2D(1.0, 0.0),
             tick,
             history,
-            entity_type=EntityType.ITEM,
+            entity_type=EntityType.FOOD,
             max_speed=0.0,
             max_angle=0.02,
             name=name,
@@ -219,7 +226,9 @@ class Food(BaseEntity):
 
 class EntityGroup(EntityObject):
     def __init__(self, entity_list: list, name: str) -> None:
-        super().__init__(name)
+        super().__init__(
+            math_utils.Vector2D(), math_utils.Vector2D(), name, EntityType.NOTHING
+        )
         self._logger = logging.getLogger(__class__.__name__)
 
         for entity in entity_list:

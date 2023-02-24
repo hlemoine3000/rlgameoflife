@@ -10,7 +10,7 @@ from rlgameoflife import entities
 
 
 ENTITY_COLOR_DICT = {
-    entities.EntityType.ITEM: [0, 1, 0],
+    entities.EntityType.FOOD: [0, 1, 0],
     entities.EntityType.CREATURE: [0, 0, 1],
 }
 
@@ -26,7 +26,7 @@ class Visualizer:
             os.path.join(simulation_dir_path, "entities_history.npz")
         )
 
-    def make_gif(self):
+    def make_video(self):
         history_dict = self._entities_history_loader.get_timed_history()
         fig, ax = plt.subplots()
 
@@ -39,7 +39,7 @@ class Visualizer:
 
             for entity_name, entity_data in history_dict[frame].items():
                 pos = entity_data["position"]
-                if entity_data["type"] == entities.EntityType.ITEM.value:
+                if entity_data["type"] == entities.EntityType.FOOD.value:
                     color = "blue"
                 elif entity_data["type"] == entities.EntityType.CREATURE.value:
                     color = "red"

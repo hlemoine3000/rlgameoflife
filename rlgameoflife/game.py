@@ -8,6 +8,7 @@ import tqdm
 from rlgameoflife import entities
 from rlgameoflife import events
 from rlgameoflife import math_utils
+from rlgameoflife import mover
 
 
 class World:
@@ -18,8 +19,9 @@ class World:
         now = datetime.datetime.now()
         self._output_dir = os.path.join(output_dir, now.strftime("%m%d%Y%H%M%S"))
         self._history = entities.EntitiesHistoryLoader(self._output_dir)
-
         self.boundaries = math_utils.Vector2D(1000.0, 1000.0)
+
+        # Create Initial entities.
         self.creature_group = entities.EntityGroup(
             [
                 entities.Creature(
@@ -39,9 +41,15 @@ class World:
             [self.creature_group, self.food_group], "all_entities_group"
         )
 
+        # Set up events
         self._tick = 0
         self.tick_events = events.TickEvents()
-        self.tick_events.set_tick_event(events.EventType.SPAWN_FOOD_EVENT, 60 * 10)
+        self.tick_events.set_tick_event(events.EventType.SPAWN_FOOD_EVENT, 200)
+        
+        # Set up movers
+        self._movers = [
+            mover.SimpleCreatureMover(self.creature_group)
+        ]
 
     def spawn_food(self) -> None:
         self.food_group.add(
@@ -86,7 +94,9 @@ class World:
             creature.move(nearest_food_vector)
 
     def move(self) -> None:
-        self.creature_move()
+        for mov in self._movers:
+            mov.move(self.entities_group)
+        # self.creature_move()
 
     def save_history(self) -> None:
         self._logger.info(f"Save simulation history at {self._output_dir}")

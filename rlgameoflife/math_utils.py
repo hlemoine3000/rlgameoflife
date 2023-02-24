@@ -2,7 +2,7 @@ import numpy as np
 
 
 class Vector2D:
-    def __init__(self, x: float, y: float) -> None:
+    def __init__(self, x: float = 0., y: float = 0.) -> None:
         self.vector = np.array([x, y])
 
     @property

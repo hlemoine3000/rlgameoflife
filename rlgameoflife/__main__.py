@@ -70,7 +70,7 @@ def main():
 
     if args.visualize:
         my_vis = visualisation.Visualizer(args.visualize)
-        my_vis.make_gif()
+        my_vis.make_video()
 
 
 main()
