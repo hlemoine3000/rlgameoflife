@@ -22,9 +22,8 @@ ENTITY_INDEXER = EnittyIndexer()
 
 
 class EntityType(enum.Enum):
-    NOTHING = 1
-    ITEM = 2
-    CREATURE = 3
+    ITEM = 0
+    CREATURE = 1
 
 
 class EntitiesHistoryLoader:
@@ -113,7 +112,7 @@ class BaseEntity(EntityObject):
         dir: math_utils.Vector2D,
         tick: int,
         history: EntitiesHistoryLoader,
-        entity_type: EntityType = EntityType.NOTHING,
+        entity_type: EntityType = EntityType.ITEM,
         max_speed: float = 1.0,
         max_angle: float = 0.02,  # radians
         name: str = "entity",
@@ -140,6 +139,10 @@ class BaseEntity(EntityObject):
     @property
     def direction(self) -> math_utils.Vector2D:
         return self._direction
+
+    @property
+    def entity_type(self) -> EntityType:
+        return self._entity_type
 
     def move(self, mov: math_utils.Vector2D) -> None:
         movement = copy.copy(mov)
