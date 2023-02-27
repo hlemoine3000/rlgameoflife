@@ -27,6 +27,7 @@ class Visualizer:
         )
 
     def make_video(self):
+        self._logger.info("Create video of simulation %s", self._simulation_dir_path)
         history_dict = self._entities_history_loader.get_timed_history()
         fig, ax = plt.subplots()
 
@@ -39,6 +40,7 @@ class Visualizer:
 
             for entity_name, entity_data in history_dict[frame].items():
                 pos = entity_data["position"]
+                dir = entity_data["direction"]
                 if entity_data["type"] == entities.EntityType.FOOD.value:
                     color = "blue"
                 elif entity_data["type"] == entities.EntityType.CREATURE.value:
@@ -46,6 +48,8 @@ class Visualizer:
                 else:
                     color = "black"
                 ax.plot(pos[0], pos[1], marker="o", markersize=5, color=color)
+                if entity_data["type"] == entities.EntityType.CREATURE.value:
+                    ax.plot([pos[0], pos[0] + dir[0]* 20], [pos[1], pos[1] + dir[1] * 20], 'k-', lw=1)
                 ax.annotate(entity_name, pos)
 
         save_start = time.time()
