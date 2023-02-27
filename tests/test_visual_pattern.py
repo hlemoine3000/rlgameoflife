@@ -12,9 +12,8 @@ class VisualConePatternTestCase(unittest.TestCase):
         self.arc_angle = np.pi
         self.arc_radius = 100
         self.num_sensor = 5
-        self.num_entity_type = 2
         self.visual_cone_pattern = visual_pattern.VisualConePattern(
-            self.arc_angle, self.arc_radius, self.num_sensor, self.num_entity_type
+            self.arc_angle, self.arc_radius, self.num_sensor
         )
 
     @parameterized.expand(
@@ -32,7 +31,22 @@ class VisualConePatternTestCase(unittest.TestCase):
                     0,
                     entities.EntitiesHistoryLoader("/tmp"),
                 ),
-                np.array([[0, 0], [0, 0], [0.5, 0], [0, 0], [0, 0]]),
+                np.array([[1, 1], [1, 1], [0.5, 1], [1, 1], [1, 1]]),
+            ),
+            (
+                "foodInEdgeFieldOfView",
+                entities.Creature(
+                    math_utils.Vector2D(0, 0),
+                    math_utils.Vector2D(1, 0),
+                    0,
+                    entities.EntitiesHistoryLoader("/tmp"),
+                ),
+                entities.Food(
+                    math_utils.Vector2D(0, 50),
+                    0,
+                    entities.EntitiesHistoryLoader("/tmp"),
+                ),
+                np.array([[1, 1], [1, 1], [1, 1], [1, 1], [0.5, 1]]),
             ),
             (
                 "creatureInFieldOfView",
@@ -48,7 +62,7 @@ class VisualConePatternTestCase(unittest.TestCase):
                     0,
                     entities.EntitiesHistoryLoader("/tmp"),
                 ),
-                np.array([[0, 0], [0, 0], [0, 0.5], [0, 0], [0, 0]]),
+                np.array([[1, 1], [1, 1], [1, 0.5], [1, 1], [1, 1]]),
             ),
             (
                 "foodNotInFieldOfView",
@@ -63,7 +77,7 @@ class VisualConePatternTestCase(unittest.TestCase):
                     0,
                     entities.EntitiesHistoryLoader("/tmp"),
                 ),
-                np.zeros((5, 2)),
+                np.ones((5, 2)),
             ),
             (
                 "foodToFar",
@@ -78,7 +92,7 @@ class VisualConePatternTestCase(unittest.TestCase):
                     0,
                     entities.EntitiesHistoryLoader("/tmp"),
                 ),
-                np.zeros((5, 2)),
+                np.ones((5, 2)),
             ),
             (
                 "multipleFoodInFieldOfView",
@@ -103,7 +117,7 @@ class VisualConePatternTestCase(unittest.TestCase):
                     ],
                     "food_test_group",
                 ),
-                np.array([[0, 0], [0, 0], [0.5, 0], [0, 0], [0, 0]]),
+                np.array([[1, 1], [1, 1], [0.5, 1], [1, 1], [1, 1]]),
             ),
             (
                 "creatureAndFoodInFieldOfView",
@@ -129,7 +143,7 @@ class VisualConePatternTestCase(unittest.TestCase):
                     ],
                     "food_test_group",
                 ),
-                np.array([[0, 0], [0, 0], [0.5, 0], [0, 0], [0, 0]]),
+                np.array([[1, 1], [1, 1], [0.5, 1], [1, 1], [1, 1]]),
             ),
         ]
     )

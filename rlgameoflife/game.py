@@ -34,7 +34,11 @@ class World:
             "creature_group",
         )
         self.food_group = entities.EntityGroup(
-            [entities.Food(math_utils.Vector2D(500, 500), 0, self._history)],
+            [
+                entities.Food(math_utils.Vector2D(500, 500), 0, self._history),
+                entities.Food(math_utils.Vector2D(500, 400), 0, self._history),
+                entities.Food(math_utils.Vector2D(500, 300), 0, self._history),
+            ],
             "food_group",
         )
         self.entities_group = entities.EntityGroup(
@@ -45,11 +49,9 @@ class World:
         self._tick = 0
         self.tick_events = events.TickEvents()
         self.tick_events.set_tick_event(events.EventType.SPAWN_FOOD_EVENT, 200)
-        
+
         # Set up movers
-        self._movers = [
-            mover.SimpleCreatureMover(self.creature_group)
-        ]
+        self._movers = [mover.SimpleVisualCreatureMover(self.creature_group)]
 
     def spawn_food(self) -> None:
         self.food_group.add(
@@ -72,31 +74,9 @@ class World:
     def update_groups(self) -> None:
         self.entities_group.update()
 
-    def creature_move(self) -> None:
-        if len(self.food_group) == 0:
-            return
-        for creature in self.creature_group:
-            # Get nearest food.
-            nearest_food_distance = 100000
-            for food_idx, food in enumerate(self.food_group):
-                food_vector = creature.position.subtract(food.position)
-                food_distance = food_vector.magnitude()
-                if food_distance < nearest_food_distance:
-                    nearest_food_distance = food_distance
-                    nearest_food_vector = food_vector
-                    nearest_food_idx = food_idx
-
-            if nearest_food_distance < 5:
-                # Creature eat the food when near.
-                self.food_group.kill(nearest_food_idx)
-                return
-            # Creature move to nearest food.
-            creature.move(nearest_food_vector)
-
     def move(self) -> None:
         for mov in self._movers:
             mov.move(self.entities_group)
-        # self.creature_move()
 
     def save_history(self) -> None:
         self._logger.info(f"Save simulation history at {self._output_dir}")

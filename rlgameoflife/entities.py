@@ -3,6 +3,7 @@ import enum
 import logging
 import numpy as np
 import os
+import typing
 
 from rlgameoflife import math_utils
 
@@ -143,6 +144,7 @@ class BaseEntity(EntityObject):
         self._logger = logging.getLogger(__class__.__name__)
 
         self._next_position = pos
+        self._next_direction = dir
         self._max_speed = max_speed
         self.max_angle = max_angle
 
@@ -150,6 +152,13 @@ class BaseEntity(EntityObject):
         self._history = history
         self._history.add(self._name, tick - 1, pos, dir, entity_type)
         self._tick = tick
+    
+    def rotate(self, angle: float) -> None:
+        # Check max angle
+        if abs(angle) > self.max_angle:
+            angle = self.max_angle if angle > 0 else -self.max_angle
+        # Calculate direction
+        self._next_direction = self._direction.rotate(angle).normalize()
 
     def move(self, mov: math_utils.Vector2D) -> None:
         movement = copy.copy(mov)
@@ -160,20 +169,20 @@ class BaseEntity(EntityObject):
 
         # Check max angle
         movement_angle = movement.angle_between(self._direction)
-        if abs(movement_angle) > self.max_angle:
-            movement_angle = self.max_angle if movement_angle > 0 else -self.max_angle
+        self.rotate(movement_angle)
 
         # Calculate movement
-        self._direction = self._direction.rotate(movement_angle).normalize()
         self._next_position = self._position.add(
-            self._direction.scale(movement_distance)
+            self._next_direction.scale(movement_distance)
         )
-
+    
     def flush_move(self) -> None:
         self._next_position = self._position
+        self._next_direction = self._direction
 
     def update(self) -> None:
         self._position = self._next_position
+        self._direction = self._next_direction
         self._history.add(
             self._name,
             self._tick,
@@ -225,7 +234,7 @@ class Food(BaseEntity):
 
 
 class EntityGroup(EntityObject):
-    def __init__(self, entity_list: list, name: str) -> None:
+    def __init__(self, entity_list: typing.List[EntityObject], name: str) -> None:
         super().__init__(
             math_utils.Vector2D(), math_utils.Vector2D(), name, EntityType.NOTHING
         )
@@ -287,3 +296,7 @@ class EntityGroup(EntityObject):
 
     def kill(self, entity_idx: int) -> None:
         self._entity_list.pop(entity_idx)
+    
+    def kills(self, entities_idx: list) -> None:
+        for entity_idx in entities_idx:
+            self.kill(entity_idx)

@@ -2,9 +2,14 @@ import numpy as np
 
 
 class Vector2D:
-    def __init__(self, x: float = 0., y: float = 0.) -> None:
-        self.vector = np.array([x, y])
+    def __init__(self, x: float = 0., y: float = 0., magnitude: float = 0., angle: float = 0.) -> None:
+        self.vector = np.array([0., 0.])
+        if x or y:
+            self.vector = np.array([x, y])
+        elif magnitude or angle:
+            self.vector = np.array([np.cos(angle), np.sin(angle)]) * magnitude
 
+            
     @property
     def x(self) -> float:
         return self.vector[0]
