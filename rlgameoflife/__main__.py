@@ -1,10 +1,14 @@
 import argparse
 import logging
+import os
 
 import tqdm
 
 from rlgameoflife import game
 from rlgameoflife import visualisation
+
+
+DEFAULT_OUTPUT_DIRECTORY = "outputs"
 
 
 class TqdmLoggingHandler(logging.Handler):
@@ -34,7 +38,7 @@ def argument_parser():
         "-o",
         "--output",
         help="Output Directory to store the simulation artifacts.",
-        default="outputs",
+        default=DEFAULT_OUTPUT_DIRECTORY,
     )
     parser.add_argument(
         "-s",
@@ -48,6 +52,9 @@ def argument_parser():
         "--visualize",
         help="Create a video from a simulation history.",
         default=None,
+    )
+    parser.add_argument(
+        "-l", "--last", help="Visualize last simulation.", action="store_true"
     )
 
     return parser
@@ -68,8 +75,21 @@ def main():
         my_world = game.World(args.iterations, args.output)
         my_world.simulate()
 
-    if args.visualize:
-        my_vis = visualisation.Visualizer(args.visualize)
+    sim_dir = None
+    if args.last:
+        dir_list = os.listdir(DEFAULT_OUTPUT_DIRECTORY)
+        dir_list.sort()
+
+        for dir in dir_list:
+            if os.path.isdir(os.path.join(DEFAULT_OUTPUT_DIRECTORY, dir)):
+                sim_dir = os.path.join(DEFAULT_OUTPUT_DIRECTORY, dir)
+                continue
+        if not sim_dir:
+            main_logger.warning("latest simulation not found.")
+    elif args.visualize:
+        sim_dir = args.visualize
+    if sim_dir:
+        my_vis = visualisation.Visualizer(sim_dir)
         my_vis.make_video()
 
 
