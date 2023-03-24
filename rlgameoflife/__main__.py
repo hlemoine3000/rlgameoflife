@@ -4,7 +4,7 @@ import os
 
 import tqdm
 
-from rlgameoflife import game
+from rlgameoflife import worlds
 from rlgameoflife import visualisation
 
 
@@ -72,7 +72,7 @@ def main():
     )
     main_logger.addHandler(tqdm_handler)
     if args.simulate:
-        my_world = game.World(args.iterations, args.output)
+        my_world = worlds.BasicWorld(args.iterations, args.output)
         my_world.simulate()
 
     sim_dir = None

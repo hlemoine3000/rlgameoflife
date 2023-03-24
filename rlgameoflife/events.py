@@ -47,10 +47,10 @@ class TickEvents:
     def __init__(self) -> None:
         self._event_list = []
 
-    def set_tick_event(self, event_type: EventType, tick: int):
+    def add_tick_event(self, event_type: EventType, tick: int):
         self._event_list.append(TickEvent(event_type, tick))
 
-    def get(self) -> list:
+    def get(self) -> list[EventType]:
         return [event.event_type for event in self._event_list if event.trigger()]
 
     def update(self) -> None:
