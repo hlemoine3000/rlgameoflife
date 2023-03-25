@@ -4,7 +4,7 @@ import logging
 import os
 import random
 import tqdm
-from typing import Tuple
+import typing
 
 from rlgameoflife import entities
 from rlgameoflife import events
@@ -12,8 +12,11 @@ from rlgameoflife import math_utils
 from rlgameoflife import mover
 
 
+MoverList = typing.NewType('MoverList', typing.List[mover.Mover])
+
+
 class BaseWorld:
-    def __init__(self, total_ticks: int, output_dir: str, boundaries: Tuple[float, float] = (1000, 1000)) -> None:
+    def __init__(self, total_ticks: int, output_dir: str, boundaries: typing.Tuple[float, float] = (1000, 1000)) -> None:
         self._logger = logging.getLogger(__class__.__name__)
 
         self._total_ticks = total_ticks
@@ -23,7 +26,7 @@ class BaseWorld:
         self._boundaries = math_utils.Vector2D(boundaries[0], boundaries[1])
 
         self._entities_group = entities.EntityGroup([], "all_entities_group")
-        self._movers = []
+        self._movers = MoverList([])
 
         # Set up events
         self._tick = 0
@@ -89,7 +92,7 @@ class BaseWorld:
 
 
 class BasicWorld(BaseWorld):
-    def __init__(self, total_ticks: int, output_dir: str, boundaries: Tuple[int, int] = (1000, 1000)) -> None:
+    def __init__(self, total_ticks: int, output_dir: str, boundaries: typing.Tuple[int, int] = (1000, 1000)) -> None:
         super().__init__(total_ticks, output_dir, boundaries)
         
         # Create initial entities
