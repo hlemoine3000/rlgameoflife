@@ -8,6 +8,10 @@ import typing
 from rlgameoflife import math_utils
 
 
+class ZeroDirectionVectorException(Exception):
+    """raised when direction vector is zero"""
+
+
 class EnittyIndexer:
     def __init__(self) -> None:
         self._index = 0
@@ -104,6 +108,9 @@ class EntityObject:
         self._logger = logging.getLogger(__class__.__name__)
         self._name = name
         self._entity_type = entity_type
+        if dir.magnitude() == 0.0:
+            self._logger.error("direction vector cannot be [0, 0]")
+            raise ZeroDirectionVectorException
         self._direction = dir.normalize()
         self._position = pos
 
@@ -236,7 +243,7 @@ class Food(BaseEntity):
 class EntityGroup(EntityObject):
     def __init__(self, entity_list: typing.List[EntityObject], name: str) -> None:
         super().__init__(
-            math_utils.Vector2D(), math_utils.Vector2D(), name, EntityType.NOTHING
+            math_utils.Vector2D(), math_utils.Vector2D(1.0, 0.0), name, EntityType.NOTHING
         )
         self._logger = logging.getLogger(__class__.__name__)
 
