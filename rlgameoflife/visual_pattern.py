@@ -21,6 +21,10 @@ class VisualConePattern:
     @property
     def view_range(self) -> float:
         return self._arc_radius
+    
+    @property
+    def shape(self) -> tuple[int, ...]:
+        return self._visual_pattern.shape
 
     def reset(self) -> None:
         self._visual_pattern = np.ones((self._num_sensor, self._num_entities_type))

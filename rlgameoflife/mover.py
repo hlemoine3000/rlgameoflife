@@ -2,7 +2,6 @@ import logging
 
 from rlgameoflife import collider
 from rlgameoflife import entities
-from rlgameoflife import math_utils
 from rlgameoflife import visual_pattern
 
 import numpy as np
