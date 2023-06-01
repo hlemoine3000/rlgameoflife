@@ -1,4 +1,4 @@
-FROM python:3.11.1-buster
+FROM pytorch/pytorch:2.0.0-cuda11.7-cudnn8-runtime
 
 RUN apt update && apt upgrade -y && apt install -y \
 ffmpeg

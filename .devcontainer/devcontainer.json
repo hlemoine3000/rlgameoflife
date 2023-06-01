@@ -32,9 +32,9 @@
 				"VisualStudioExptTeam.vscodeintellicode"
 			],
 			"settings": {
-				  "editor.defaultFormatter": "ms-python.black-formatter",
-				  "editor.formatOnSave": true,
-				  "python.testing.unittestEnabled": true,
+					"editor.defaultFormatter": "ms-python.black-formatter",
+					"editor.formatOnSave": true,
+					"python.testing.unittestEnabled": true,
 					"python.testing.unittestArgs": [
 						"-v",
 						"-s",
@@ -42,6 +42,7 @@
 						"-p",
 						"*test_*.py"
 					],
+					"python.defaultInterpreterPath": "/opt/conda/bin/python"
 			}
 		}
 	}
