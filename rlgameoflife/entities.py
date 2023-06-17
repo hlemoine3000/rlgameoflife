@@ -161,6 +161,7 @@ class BaseEntity(EntityObject):
         self._tick = tick
     
     def rotate(self, angle: float) -> None:
+        """Rotate the entity by the given angle in radians."""
         # Check max angle
         if abs(angle) > self.max_angle:
             angle = self.max_angle if angle > 0 else -self.max_angle
@@ -168,6 +169,7 @@ class BaseEntity(EntityObject):
         self._next_direction = self._direction.rotate(angle).normalize()
 
     def move(self, mov: math_utils.Vector2D) -> None:
+        """Move the entity by the given movement vector."""
         movement = copy.copy(mov)
         # Check max speed.
         movement_distance = mov.magnitude()
@@ -184,10 +186,12 @@ class BaseEntity(EntityObject):
         )
     
     def flush_move(self) -> None:
+        """Flush the movement to the entity."""
         self._next_position = self._position
         self._next_direction = self._direction
 
     def update(self) -> None:
+        """Update the entity position and direction with the next position and direction."""
         self._position = self._next_position
         self._direction = self._next_direction
         self._history.add(

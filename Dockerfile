@@ -1,8 +1,5 @@
 FROM pytorch/pytorch:2.0.0-cuda11.7-cudnn8-runtime
 
-RUN apt update && apt upgrade -y && apt install -y \
-ffmpeg
-
 RUN python3 -m pip install --upgrade pip
 COPY requirements.txt .
 RUN pip3 install -r requirements.txt

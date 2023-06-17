@@ -29,7 +29,7 @@ class AgentParameters:
 
 class BaseWorld:
     _movers: typing.List[mover.Mover]
-    _observation_shape: tuple[int, ...]
+    observation_shape: tuple[int, ...]
 
     def __init__(
         self,
@@ -47,13 +47,19 @@ class BaseWorld:
 
         self._entities_group = entities.EntityGroup([], "all_entities_group")
         self._movers = []
-        
-        # Need to set this up
-        _observation_shape = None
 
         # Set up events
         self._tick = 0
         self._tick_events = events.TickEvents()
+        
+        self._init()
+    
+    def _init(self) -> None:
+        self._logger.warning("_init not implemented.")
+    
+    def reset(self) -> None:
+        self._tick_events.reset()
+        self._init()
 
     def add_entities_group(self, entities_group: entities.EntityGroup) -> None:
         self._entities_group.add(entities_group)
@@ -190,6 +196,15 @@ class BasicAgentWorld(BaseWorld):
     ) -> None:
         super().__init__(total_ticks, output_dir, boundaries)
 
+        self.agent_vision = visual_pattern.VisualConePattern(np.pi / 2, 1000.0, 9)
+        self.observation_shape = self.agent_vision.shape
+        self.agent_collider = collider.CreatureFoodCollider(self.agent_group)
+        self.action_space = actions.DiscreteMoveActions
+
+        # Set up events
+        self.add_tick_event(events.EventType.SPAWN_FOOD_EVENT, 200)
+    
+    def _init(self) -> None:
         # Create initial entities
         self.food_group = entities.EntityGroup(
             [
@@ -209,12 +224,6 @@ class BasicAgentWorld(BaseWorld):
         )
         self.agent_group = entities.EntityGroup([self.agent], "agent-group")
         self.add_entities_group(self.agent_group)
-        self.agent_vision = visual_pattern.VisualConePattern(np.pi / 2, 1000.0, 9)
-        self._observation_shape = self.agent_vision.shape
-        self.agent_collider = collider.CreatureFoodCollider(self.agent_group)
-
-        # Set up events
-        self.add_tick_event(events.EventType.SPAWN_FOOD_EVENT, 200)
 
     def spawn_food(self) -> None:
         self.food_group.add(
@@ -231,19 +240,27 @@ class BasicAgentWorld(BaseWorld):
     def tick_events_actions(self, event: events.EventType) -> None:
         if event == events.EventType.SPAWN_FOOD_EVENT:
             self.spawn_food()
-
-    def agent_actions(self, step_actions: actions.Actions) -> AgentParameters:
-        if type(step_actions) is not actions.BaseMoveActions:
-            self._logger.error("step action bad type %s", type(step_actions))
-            raise actions.BadActionTypeException()
+    
+    def get_observation(self) -> np.ndarray:
         self.agent_vision.reset()
         self.agent_vision.update(self.agent, self._entities_group)
+        return self.agent_vision.visual_pattern.flatten()
+
+    def agent_actions(self, step_actions: actions.DiscreteMoveActions) -> AgentParameters:
+        if type(step_actions) is not actions.DiscreteMoveActions:
+            self._logger.error("step action bad type %s", type(step_actions))
+            raise actions.BadActionTypeException()
         reward_list = self.agent_collider.collide(self._entities_group)
         reward = reward_list[0]
-        self.agent.move(step_actions.move)
+        if step_actions == actions.DiscreteMoveActions.FORWARD:
+            self.agent.move(self.agent.direction)
+        elif step_actions == actions.DiscreteMoveActions.ROTATE_RIGHT:
+            self.agent.rotate(-0.1)
+        elif step_actions == actions.DiscreteMoveActions.ROTATE_LEFT:
+            self.agent.rotate(0.1)
 
         return AgentParameters(
-            observation=self.agent_vision.visual_pattern,
+            observation=self.get_observation(),
             reward=reward,
             terminated=False,
             truncated=False,

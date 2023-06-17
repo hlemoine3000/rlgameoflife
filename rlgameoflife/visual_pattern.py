@@ -15,7 +15,7 @@ class VisualConePattern:
         self._visual_pattern = np.ones((self._num_sensor, self._num_entities_type))
 
     @property
-    def visual_pattern(self) -> np.array:
+    def visual_pattern(self) -> np.ndarray:
         return self._visual_pattern
     
     @property

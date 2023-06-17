@@ -56,9 +56,9 @@ class Visualizer:
         anim = animation.FuncAnimation(
             fig, update, frames=list(history_dict.keys()), interval=1
         )
-        writervideo = animation.FFMpegWriter(fps=120)
+        writervideo = animation.PillowWriter(fps=120)
         anim.save(
-            os.path.join(self._simulation_dir_path, "entities_history.mp4"),
+            os.path.join(self._simulation_dir_path, "entities_history.gif"),
             writer=writervideo,
         )
         save_end = time.time()

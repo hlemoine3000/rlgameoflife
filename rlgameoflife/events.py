@@ -33,6 +33,9 @@ class TickEvent:
     @property
     def tick(self):
         return self._tick
+    
+    def reset(self) -> None:
+        self._tick_counter.reset()
 
     def trigger(self):
         return self._tick == self._tick_counter.tick
@@ -44,8 +47,14 @@ class TickEvent:
 
 
 class TickEvents:
+    _event_list: list[TickEvent]
+    
     def __init__(self) -> None:
         self._event_list = []
+    
+    def reset(self) -> None:
+        for event in self._event_list:
+            event.reset()
 
     def add_tick_event(self, event_type: EventType, tick: int):
         self._event_list.append(TickEvent(event_type, tick))
