@@ -80,7 +80,7 @@ class EntitiesHistoryLoader:
     def get_timed_history(self) -> tuple[dict, tuple[int, int, int, int]]:
         total_ticks = self.get_total_ticks()
         timed_history_dict = {}
-        max_x, max_y, min_x, min_y = 0, 0, 0, 0
+        max_x, max_y, min_x, min_y = 0, 0, 10000, 10000
         for tick in range(total_ticks + 1):
             timed_history_dict[tick] = {}
             for entity_name, entity_np in self._history_npd.items():
@@ -99,6 +99,8 @@ class EntitiesHistoryLoader:
                 max_y = max(max_y, event_np[2])
                 min_x = min(min_x, event_np[1])
                 min_y = min(min_y, event_np[2])
+                print(event_np)
+                print(min_x, min_y, max_x, max_y)
         return timed_history_dict, (min_x, min_y, max_x, max_y)
 
 

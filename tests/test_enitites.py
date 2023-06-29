@@ -49,7 +49,7 @@ class EntitiesHistoryLoaderTestCase(unittest.TestCase):
     def test_get_timed_history(self):
         self.loader.add(self.entity_name, 1, math_utils.Vector2D(1, 2), math_utils.Vector2D(3, 4), entities.EntityType.CREATURE)
         self.loader.add(self.entity_name, 2, math_utils.Vector2D(5, 6), math_utils.Vector2D(7, 8), entities.EntityType.FOOD)
-        timed_history = self.loader.get_timed_history()
+        timed_history, boundaries = self.loader.get_timed_history()
         self.assertEqual(len(timed_history), 3)
         self.assertIn(1, timed_history)
         self.assertIn(self.entity_name, timed_history[1])
@@ -61,3 +61,4 @@ class EntitiesHistoryLoaderTestCase(unittest.TestCase):
         np.testing.assert_array_equal(timed_history[2][self.entity_name]["position"], np.array([5, 6]))
         np.testing.assert_array_equal(timed_history[2][self.entity_name]["direction"], np.array([7, 8]))
         np.testing.assert_array_equal(timed_history[2][self.entity_name]["type"], np.array([entities.EntityType.FOOD.value]))
+        self.assertTupleEqual(boundaries, (1, 2, 5, 6))
