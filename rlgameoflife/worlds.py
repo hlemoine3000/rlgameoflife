@@ -208,16 +208,16 @@ class BasicAgentWorld(BaseWorld):
         # Create initial entities
         self.food_group = entities.EntityGroup(
             [
-                entities.Food(math_utils.Vector2D(500, 500), 0, self._history),
-                entities.Food(math_utils.Vector2D(500, 400), 0, self._history),
-                entities.Food(math_utils.Vector2D(500, 300), 0, self._history),
+                entities.Food(math_utils.Vector2D(50, 30), 0, self._history),
+                entities.Food(math_utils.Vector2D(50, 20), 0, self._history),
+                entities.Food(math_utils.Vector2D(50, 10), 0, self._history),
             ],
             "food_group",
         )
         self.add_entities_group(self.food_group)
 
         self.agent = entities.Creature(
-            math_utils.Vector2D(100.0, 100.0),
+            math_utils.Vector2D(10.0, 10.0),
             math_utils.Vector2D(1.0, 0.0),
             0,
             self._history,

@@ -6,6 +6,7 @@ import tqdm
 
 from rlgameoflife import worlds
 from rlgameoflife import visualisation
+from rlgameoflife import agent
 
 
 DEFAULT_OUTPUT_DIRECTORY = "outputs"
@@ -56,6 +57,9 @@ def argument_parser():
     parser.add_argument(
         "-l", "--last", help="Visualize last simulation.", action="store_true"
     )
+    parser.add_argument(
+        "-t", "--train", help="Train agents.", action="store_true"
+    )
 
     return parser
 
@@ -71,6 +75,12 @@ def main():
         logging.Formatter("%(name)s - %(levelname)s - %(message)s")
     )
     main_logger.addHandler(tqdm_handler)
+    
+    if args.train:
+        agent_trainer = agent.AgentTrainer()
+        agent_trainer.train()
+        return
+    
     if args.simulate:
         my_world = worlds.BasicWorld(args.iterations, args.output)
         my_world.simulate()
