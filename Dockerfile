@@ -1,5 +1,7 @@
 FROM pytorch/pytorch:2.0.0-cuda11.7-cudnn8-runtime
 
+RUN apt-get -qq update && apt-get -qq install -y git imagemagick
+
 RUN python3 -m pip install --upgrade pip
 COPY requirements.txt .
 RUN pip3 install -r requirements.txt

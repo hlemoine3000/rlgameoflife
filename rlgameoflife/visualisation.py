@@ -28,13 +28,17 @@ class Visualizer:
 
     def make_video(self):
         self._logger.info("Create video of simulation %s", self._simulation_dir_path)
-        history_dict = self._entities_history_loader.get_timed_history()
+        history_dict, boundaries = self._entities_history_loader.get_timed_history()
         fig, ax = plt.subplots()
+        
+        xlim = [boundaries[0] - 20., boundaries[2] + 20]
+        ylim = [boundaries[1] - 20., boundaries[3] + 20]
+        dir_line_size = (xlim[1] - xlim[0]) / 20.
 
         def update(frame):
             ax.clear()
-            ax.set_xlim([0, 1000])  # Change as needed
-            ax.set_ylim([0, 1000])  # Change as needed
+            ax.set_xlim(xlim)
+            ax.set_ylim(ylim)
             ax.set_aspect("equal", "box")
             ax.set_title(f"Itereation: {frame}")
 
@@ -49,16 +53,16 @@ class Visualizer:
                     color = "black"
                 ax.plot(pos[0], pos[1], marker="o", markersize=5, color=color)
                 if entity_data["type"] == entities.EntityType.CREATURE.value:
-                    ax.plot([pos[0], pos[0] + dir[0]* 20], [pos[1], pos[1] + dir[1] * 20], 'k-', lw=1)
+                    ax.plot([pos[0], pos[0] + dir[0]* dir_line_size], [pos[1], pos[1] + dir[1] * dir_line_size], 'k-', lw=1)
                 ax.annotate(entity_name, pos)
 
         save_start = time.time()
         anim = animation.FuncAnimation(
-            fig, update, frames=list(history_dict.keys()), interval=1
+            fig, update, frames=list(history_dict.keys())
         )
-        writervideo = animation.PillowWriter(fps=120)
+        writervideo = animation.ImageMagickWriter(fps=240)
         anim.save(
-            os.path.join(self._simulation_dir_path, "entities_history.gif"),
+            os.path.join(self._simulation_dir_path, "entities_history.mp4"),
             writer=writervideo,
         )
         save_end = time.time()

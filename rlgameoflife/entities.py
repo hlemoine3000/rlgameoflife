@@ -77,9 +77,10 @@ class EntitiesHistoryLoader:
             total_ticks = int(np.amax(entity_np[:, 0], initial=total_ticks))
         return total_ticks
 
-    def get_timed_history(self) -> dict:
+    def get_timed_history(self) -> tuple[dict, tuple[int, int, int, int]]:
         total_ticks = self.get_total_ticks()
         timed_history_dict = {}
+        max_x, max_y, min_x, min_y = 0, 0, 0, 0
         for tick in range(total_ticks + 1):
             timed_history_dict[tick] = {}
             for entity_name, entity_np in self._history_npd.items():
@@ -94,7 +95,11 @@ class EntitiesHistoryLoader:
                     "direction": event_np[3:5],
                     "type": event_np[5],
                 }
-        return timed_history_dict
+                max_x = max(max_x, event_np[1])
+                max_y = max(max_y, event_np[2])
+                min_x = min(min_x, event_np[1])
+                min_y = min(min_y, event_np[2])
+        return timed_history_dict, (min_x, min_y, max_x, max_y)
 
 
 class EntityObject:
@@ -113,6 +118,12 @@ class EntityObject:
             raise ZeroDirectionVectorException
         self._direction = dir.normalize()
         self._position = pos
+    
+    def __str__(self):
+        return f"EntityObject('{self._name}', {self._entity_type}, {self._position}, {self._direction})"
+
+    def __repr__(self):
+        return f"EntityObject('{self._name}', {self._entity_type}, {self._position}, {self._direction})"
 
     @property
     def name(self):
@@ -159,7 +170,7 @@ class BaseEntity(EntityObject):
         self._history = history
         self._history.add(self._name, tick - 1, pos, dir, entity_type)
         self._tick = tick
-    
+
     def rotate(self, angle: float) -> None:
         """Rotate the entity by the given angle in radians."""
         # Check max angle
@@ -184,7 +195,7 @@ class BaseEntity(EntityObject):
         self._next_position = self._position.add(
             self._next_direction.scale(movement_distance)
         )
-    
+
     def flush_move(self) -> None:
         """Flush the movement to the entity."""
         self._next_position = self._position
@@ -247,7 +258,10 @@ class Food(BaseEntity):
 class EntityGroup(EntityObject):
     def __init__(self, entity_list: typing.List[EntityObject], name: str) -> None:
         super().__init__(
-            math_utils.Vector2D(), math_utils.Vector2D(1.0, 0.0), name, EntityType.NOTHING
+            math_utils.Vector2D(),
+            math_utils.Vector2D(1.0, 0.0),
+            name,
+            EntityType.NOTHING,
         )
         self._logger = logging.getLogger(__class__.__name__)
 
@@ -256,6 +270,12 @@ class EntityGroup(EntityObject):
                 return
         self._entity_list = entity_list
         self._name = name
+
+    def __str__(self):
+        return f"EntityGroup('{self.name}', {self._entity_list})"
+
+    def __repr__(self):
+        return f"EntityGroup('{self.name}', {self._entity_list})"
 
     def __iter__(self):
         self._num_entity = len(self._entity_list)
@@ -307,7 +327,7 @@ class EntityGroup(EntityObject):
 
     def kill(self, entity_idx: int) -> None:
         self._entity_list.pop(entity_idx)
-    
+
     def kills(self, entities_idx: list) -> None:
         for entity_idx in entities_idx:
             self.kill(entity_idx)
