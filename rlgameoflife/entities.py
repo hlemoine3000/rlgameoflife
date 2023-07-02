@@ -99,8 +99,6 @@ class EntitiesHistoryLoader:
                 max_y = max(max_y, event_np[2])
                 min_x = min(min_x, event_np[1])
                 min_y = min(min_y, event_np[2])
-                print(event_np)
-                print(min_x, min_y, max_x, max_y)
         return timed_history_dict, (min_x, min_y, max_x, max_y)
 
 
