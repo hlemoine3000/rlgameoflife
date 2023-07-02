@@ -51,13 +51,15 @@ class BaseWorld:
         # Set up events
         self._tick = 0
         self._tick_events = events.TickEvents()
-        
+
         self._init()
-    
+
     def _init(self) -> None:
         self._logger.warning("_init not implemented.")
-    
+
     def reset(self) -> None:
+        self._entities_group = entities.EntityGroup([], "all_entities_group")
+        self._movers = []
         self._tick_events.reset()
         self._init()
 
@@ -141,6 +143,10 @@ class BasicWorld(BaseWorld):
     ) -> None:
         super().__init__(total_ticks, output_dir, boundaries)
 
+        # Set up events
+        self.add_tick_event(events.EventType.SPAWN_FOOD_EVENT, 200)
+
+    def _init(self) -> None:
         # Create initial entities
         self.creature_group = entities.EntityGroup(
             [
@@ -166,10 +172,7 @@ class BasicWorld(BaseWorld):
 
         # Set up movers
         self.add_mover(mover.SimpleVisualCreatureMover(self.creature_group))
-
-        # Set up events
-        self.add_tick_event(events.EventType.SPAWN_FOOD_EVENT, 200)
-
+        
     def spawn_food(self) -> None:
         self.food_group.add(
             entities.Food(
@@ -203,7 +206,7 @@ class BasicAgentWorld(BaseWorld):
 
         # Set up events
         self.add_tick_event(events.EventType.SPAWN_FOOD_EVENT, 200)
-    
+
     def _init(self) -> None:
         # Create initial entities
         self.food_group = entities.EntityGroup(
@@ -240,13 +243,15 @@ class BasicAgentWorld(BaseWorld):
     def tick_events_actions(self, event: events.EventType) -> None:
         if event == events.EventType.SPAWN_FOOD_EVENT:
             self.spawn_food()
-    
+
     def get_observation(self) -> np.ndarray:
         self.agent_vision.reset()
         self.agent_vision.update(self.agent, self._entities_group)
         return self.agent_vision.visual_pattern.flatten()
 
-    def agent_actions(self, step_actions: actions.DiscreteMoveActions) -> AgentParameters:
+    def agent_actions(
+        self, step_actions: actions.DiscreteMoveActions
+    ) -> AgentParameters:
         if type(step_actions) is not actions.DiscreteMoveActions:
             self._logger.error("step action bad type %s", type(step_actions))
             raise actions.BadActionTypeException()
