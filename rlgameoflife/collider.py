@@ -15,14 +15,14 @@ class Collider:
 
 
 class CreatureFoodCollider(Collider):
-    def collide(self, all_group: entities.EntityGroup) -> list[float]:
-        target_group_rewards = [0.0] * len(self._target_group)
-        for target_idx, target_entity in enumerate(self._target_group):
+    def collide(self, all_group: entities.EntityGroup) -> float:
+        reward = 0.0
+        for target_entity in self._target_group:
             entities_to_kill = []
             for polled_entity_idx, polled_entity in enumerate(all_group):
                 if type(polled_entity) is entities.EntityGroup:
                     # Recursively calculate collision with entities.
-                    self.collide(polled_entity)
+                    reward += self.collide(polled_entity)
                     continue
                 if polled_entity.entity_type != entities.EntityType.FOOD:
                     # This is no food!
@@ -31,10 +31,11 @@ class CreatureFoodCollider(Collider):
                     polled_entity.position
                 ).magnitude()
                 if entities_distance < 5.0:
+                    self._logger.debug("Collision between %s and %s", target_entity, polled_entity)
+                    reward += 1.0
                     entities_to_kill.append(polled_entity_idx)
             all_group.kills(entities_to_kill)
-            target_group_rewards[target_idx] = float(len(entities_to_kill))
-        return target_group_rewards
+        return reward
 
 
 class ColliderGroup:
