@@ -1,4 +1,5 @@
 import copy
+import datetime
 import enum
 import logging
 import numpy as np
@@ -33,10 +34,24 @@ class EntityType(enum.Enum):
 
 
 class EntitiesHistoryLoader:
-    def __init__(self, output_dir: str) -> None:
-        self._history_npd = {}  # Dictionary to store history of each entity
+    def __init__(self, output_dir: str, disable: bool = False) -> None:
+        self._logger = logging.getLogger(__class__.__name__)
         self._output_dir = output_dir
+        self._disable = disable
+        self.reset()
+    
+    @property
+    def disabled(self) -> bool:
+        return self._disable
+    
+    @disabled.setter
+    def disabled(self, value: bool) -> None:
+        self._disable = value
 
+    def reset(self) -> None:
+        self._history_npd = {}
+        self._output_subdir = os.path.join(self._output_dir, datetime.datetime.now().strftime("%m%d%Y%H%M%S"))
+    
     def add(
         self,
         entity_name: str,
@@ -45,6 +60,8 @@ class EntitiesHistoryLoader:
         dir: math_utils.Vector2D,
         entity_type: EntityType,
     ) -> None:
+        if self._disable:
+            return
         history_np = np.array([tick, *pos.vector, *dir.vector, entity_type.value])
         if entity_name not in self._history_npd:
             self._history_npd[entity_name] = history_np[np.newaxis, :]
@@ -56,9 +73,12 @@ class EntitiesHistoryLoader:
             )
 
     def save(self) -> None:
-        os.makedirs(self._output_dir, exist_ok=True)
+        if self._disable:
+            return
+        self._logger.info(f"Save simulation history at {self._output_subdir}")
+        os.makedirs(self._output_subdir, exist_ok=True)
         with open(
-            os.path.join(self._output_dir, f"entities_history.npz"), "wb"
+            os.path.join(self._output_subdir, f"entities_history.npz"), "wb"
         ) as entity_file:
             np.savez_compressed(entity_file, **self._history_npd)
 
@@ -326,8 +346,11 @@ class EntityGroup(EntityObject):
             entity.update()
 
     def kill(self, entity_idx: int) -> None:
+        if entity_idx < 0 or entity_idx >= len(self._entity_list):
+            raise IndexError("Index {} out of range in list {}".format(entity_idx, self._entity_list))
         self._entity_list.pop(entity_idx)
 
-    def kills(self, entities_idx: list) -> None:
+    def kills(self, entities_idx: list[int]) -> None:
+        entities_idx.sort(reverse=True)
         for entity_idx in entities_idx:
             self.kill(entity_idx)

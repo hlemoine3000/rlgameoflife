@@ -1,6 +1,6 @@
 from collections import namedtuple, deque
 from dataclasses import dataclass
-from itertools import count
+import logging
 import math
 import random
 
@@ -60,8 +60,8 @@ class AgentTrainerParameters:
     eps_decay: int = 1000  # controls the rate of exponential decay of epsilon, higher means a slower decay
     tau: float = 0.005  # is the update rate of the target network
     lr: float = 1e-4  # is the learning rate of the AdamW optimizer
-    num_episodes: int = 1
-    max_steps_per_episode: int = 200
+    num_episodes: int = 60
+    max_steps_per_episode: int = 400
 
 
 class WorldParameters:
@@ -71,11 +71,12 @@ class WorldParameters:
 
 class AgentTrainer:
     def __init__(self) -> None:
+        self._logger = logging.getLogger(__class__.__name__)
         self.world_parameters = WorldParameters()
         self.hyperparameters = AgentTrainerParameters()
 
         self.world = worlds.BasicAgentWorld(
-            self.world_parameters.max_ticks, "outputs", self.world_parameters.boundaries
+            self.world_parameters.max_ticks, "outputs", self.world_parameters.boundaries, disable_history=True
         )
         self.device = torch.device("cpu")
 
@@ -92,11 +93,16 @@ class AgentTrainer:
         self.optimizer = optim.AdamW(
             self.policy_net.parameters(), lr=self.hyperparameters.lr, amsgrad=True
         )
-        self.memory = ReplayMemory(10000)
+        self.memory = ReplayMemory(1000)
 
         self.steps_done = 0
+    
+    def _select_action(self, state):
+        return self.policy_net(state).max(1)[1].view(1, 1)
 
-    def select_action(self, state):
+    def select_action(self, state, training: bool = True):
+        if not training:
+            return self._select_action(state)
         sample = random.random()
         eps_threshold = self.hyperparameters.eps_end + (
             self.hyperparameters.eps_start - self.hyperparameters.eps_end
@@ -107,7 +113,7 @@ class AgentTrainer:
                 # t.max(1) will return the largest column value of each row.
                 # second column on max result is index of where max element was
                 # found, so we pick action with the larger expected reward.
-                return self.policy_net(state).max(1)[1].view(1, 1)
+                return self._select_action(state)
         else:
             return torch.tensor(
                 [[actions.sample(self.world.action_space)]],
@@ -174,22 +180,22 @@ class AgentTrainer:
         return loss.item()
 
     def train(self):
-        episode_durations = []
-        for _ in tqdm(range(self.hyperparameters.num_episodes)):
+        episode_rewards = []
+        for episode in tqdm(range(self.hyperparameters.num_episodes)):
             # Initialize the environment and get it's state
-            self.world.reset()
             state = self.world.get_observation()
             state = torch.tensor(
                 state, dtype=torch.float32, device=self.device
             ).unsqueeze(0)
             step_pbar = tqdm(range(self.hyperparameters.max_steps_per_episode))
+            episode_reward = 0
             for t in step_pbar:
                 action = self.select_action(state)
                 step_parameters = self.world.step(
                     self.world.action_space(action.item())
                 )
                 reward = torch.tensor([step_parameters.reward], device=self.device)
-                done = step_parameters.terminated or step_parameters.truncated
+                # done = step_parameters.terminated or step_parameters.truncated
 
                 if step_parameters.terminated:
                     next_state = None
@@ -207,7 +213,7 @@ class AgentTrainer:
                 state = next_state
 
                 # Perform one step of the optimization (on the policy network)
-                loss_value = self.optimize_model()
+                self.optimize_model()
 
                 # Soft update of the target network's weights
                 # θ′ ← τ θ + (1 −τ )θ′
@@ -221,11 +227,45 @@ class AgentTrainer:
                     )
                 self.target_net.load_state_dict(target_net_state_dict)
 
-                if done:
-                    episode_durations.append(t + 1)
-                    # plot_durations()
-                    break
+                episode_reward += reward.item()
 
-                step_pbar.set_description(f"Episode {_} | Step {t} | Loss {loss_value}")
+                step_pbar.set_description(f"Episode {episode} | Step {t} | Accumulated reward {episode_reward}")
             
-            self.world.save_history()
+            episode_rewards.append(episode_reward)
+            self.world.reset()
+        self._logger.info(f"Episode rewards: {episode_rewards}")
+
+    def simulate(self):
+        self.world.enable_history()
+        self.world.reset()
+        
+        # Initialize the environment and get it's state
+        state = self.world.get_observation()
+        state = torch.tensor(
+            state, dtype=torch.float32, device=self.device
+        ).unsqueeze(0)
+        step_pbar = tqdm(range(self.hyperparameters.max_steps_per_episode))
+        episode_reward = 0
+        for t in step_pbar:
+            action = self.select_action(state, training=False)
+            step_parameters = self.world.step(
+                self.world.action_space(action.item())
+            )
+            reward = torch.tensor([step_parameters.reward], device=self.device)
+            # done = step_parameters.terminated or step_parameters.truncated
+
+            if step_parameters.terminated:
+                next_state = None
+            else:
+                next_state = torch.tensor(
+                    step_parameters.observation,
+                    dtype=torch.float32,
+                    device=self.device,
+                ).unsqueeze(0)
+
+            # Move to the next state
+            state = next_state
+            episode_reward += reward.item()
+            step_pbar.set_description(f"Step {t}")
+        
+        self.world.save_history()

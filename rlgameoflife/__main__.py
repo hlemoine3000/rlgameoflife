@@ -79,6 +79,7 @@ def main():
     if args.train:
         agent_trainer = agent.AgentTrainer()
         agent_trainer.train()
+        agent_trainer.simulate()
         return
     
     if args.simulate:

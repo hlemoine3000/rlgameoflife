@@ -36,13 +36,12 @@ class BaseWorld:
         total_ticks: int,
         output_dir: str,
         boundaries: typing.Tuple[float, float] = (1000, 1000),
+        disable_history: bool = False,
     ) -> None:
         self._logger = logging.getLogger(__class__.__name__)
 
         self._total_ticks = total_ticks
-        now = datetime.datetime.now()
-        self._output_dir = os.path.join(output_dir, now.strftime("%m%d%Y%H%M%S"))
-        self._history = entities.EntitiesHistoryLoader(self._output_dir)
+        self._history = entities.EntitiesHistoryLoader(output_dir, disable=disable_history)
         self._boundaries = math_utils.Vector2D(boundaries[0], boundaries[1])
 
         self._entities_group = entities.EntityGroup([], "all_entities_group")
@@ -56,11 +55,19 @@ class BaseWorld:
 
     def _init(self) -> None:
         self._logger.warning("_init not implemented.")
+    
+    def disable_history(self) -> None:
+        self._history.disabled = True
+    
+    def enable_history(self) -> None:
+        self._history.disabled = False
 
     def reset(self) -> None:
+        self._tick = 0
         self._entities_group = entities.EntityGroup([], "all_entities_group")
         self._movers = []
         self._tick_events.reset()
+        self._history.reset()
         self._init()
 
     def add_entities_group(self, entities_group: entities.EntityGroup) -> None:
@@ -90,7 +97,6 @@ class BaseWorld:
             mov.move(self._entities_group)
 
     def save_history(self) -> None:
-        self._logger.info(f"Save simulation history at {self._output_dir}")
         self._history.save()
 
     def save_parameters(self) -> None:
@@ -195,17 +201,17 @@ class BasicAgentWorld(BaseWorld):
         self,
         total_ticks: int,
         output_dir: str,
-        boundaries: typing.Tuple[int, int] = (1000, 1000),
+        boundaries: typing.Tuple[int, int] = (100, 100),
+        disable_history: bool = False,
     ) -> None:
-        super().__init__(total_ticks, output_dir, boundaries)
+        super().__init__(total_ticks, output_dir, boundaries, disable_history)
 
         self.agent_vision = visual_pattern.VisualConePattern(np.pi / 2, 1000.0, 9)
         self.observation_shape = self.agent_vision.shape
-        self.agent_collider = collider.CreatureFoodCollider(self.agent_group)
         self.action_space = actions.DiscreteMoveActions
 
         # Set up events
-        self.add_tick_event(events.EventType.SPAWN_FOOD_EVENT, 200)
+        self.add_tick_event(events.EventType.SPAWN_FOOD_EVENT, 10)
 
     def _init(self) -> None:
         # Create initial entities
@@ -227,6 +233,7 @@ class BasicAgentWorld(BaseWorld):
         )
         self.agent_group = entities.EntityGroup([self.agent], "agent-group")
         self.add_entities_group(self.agent_group)
+        self.agent_collider = collider.CreatureFoodCollider(self.agent_group)
 
     def spawn_food(self) -> None:
         self.food_group.add(
@@ -255,8 +262,7 @@ class BasicAgentWorld(BaseWorld):
         if type(step_actions) is not actions.DiscreteMoveActions:
             self._logger.error("step action bad type %s", type(step_actions))
             raise actions.BadActionTypeException()
-        reward_list = self.agent_collider.collide(self._entities_group)
-        reward = reward_list[0]
+        reward = self.agent_collider.collide(self._entities_group)
         if step_actions == actions.DiscreteMoveActions.FORWARD:
             self.agent.move(self.agent.direction)
         elif step_actions == actions.DiscreteMoveActions.ROTATE_RIGHT:
