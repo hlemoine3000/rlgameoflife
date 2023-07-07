@@ -57,9 +57,7 @@ def argument_parser():
     parser.add_argument(
         "-l", "--last", help="Visualize last simulation.", action="store_true"
     )
-    parser.add_argument(
-        "-t", "--train", help="Train agents.", action="store_true"
-    )
+    parser.add_argument("-t", "--train", help="Train agents.", action="store_true")
 
     return parser
 
@@ -75,13 +73,13 @@ def main():
         logging.Formatter("%(name)s - %(levelname)s - %(message)s")
     )
     main_logger.addHandler(tqdm_handler)
-    
+
     if args.train:
         agent_trainer = agent.AgentTrainer()
         agent_trainer.train()
-        agent_trainer.simulate()
+        agent_trainer.evaluate()
         return
-    
+
     if args.simulate:
         my_world = worlds.BasicWorld(args.iterations, args.output)
         my_world.simulate()

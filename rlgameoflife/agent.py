@@ -60,8 +60,9 @@ class AgentTrainerParameters:
     eps_decay: int = 1000  # controls the rate of exponential decay of epsilon, higher means a slower decay
     tau: float = 0.005  # is the update rate of the target network
     lr: float = 1e-4  # is the learning rate of the AdamW optimizer
-    num_episodes: int = 60
+    num_episodes: int = 10
     max_steps_per_episode: int = 400
+    eval_each_n_episode: int = 5
 
 
 class WorldParameters:
@@ -76,7 +77,10 @@ class AgentTrainer:
         self.hyperparameters = AgentTrainerParameters()
 
         self.world = worlds.BasicAgentWorld(
-            self.world_parameters.max_ticks, "outputs", self.world_parameters.boundaries, disable_history=True
+            self.world_parameters.max_ticks,
+            "outputs",
+            self.world_parameters.boundaries,
+            disable_history=True,
         )
         self.device = torch.device("cpu")
 
@@ -96,7 +100,7 @@ class AgentTrainer:
         self.memory = ReplayMemory(1000)
 
         self.steps_done = 0
-    
+
     def _select_action(self, state):
         return self.policy_net(state).max(1)[1].view(1, 1)
 
@@ -180,15 +184,14 @@ class AgentTrainer:
         return loss.item()
 
     def train(self):
-        episode_rewards = []
-        for episode in tqdm(range(self.hyperparameters.num_episodes)):
+        episode_bar = tqdm(range(self.hyperparameters.num_episodes))
+        for episode in episode_bar:
             # Initialize the environment and get it's state
             state = self.world.get_observation()
             state = torch.tensor(
                 state, dtype=torch.float32, device=self.device
             ).unsqueeze(0)
             step_pbar = tqdm(range(self.hyperparameters.max_steps_per_episode))
-            episode_reward = 0
             for t in step_pbar:
                 action = self.select_action(state)
                 step_parameters = self.world.step(
@@ -227,30 +230,33 @@ class AgentTrainer:
                     )
                 self.target_net.load_state_dict(target_net_state_dict)
 
-                episode_reward += reward.item()
+                step_pbar.set_description(
+                    f"Train | Step {t}"
+                )
 
-                step_pbar.set_description(f"Episode {episode} | Step {t} | Accumulated reward {episode_reward}")
-            
-            episode_rewards.append(episode_reward)
+            if episode % self.hyperparameters.eval_each_n_episode == 0:
+                self.evaluate()
             self.world.reset()
-        self._logger.info(f"Episode rewards: {episode_rewards}")
+            episode_bar.set_description(f"Train | Episode {episode}")
+        self.evaluate(save_history=True)
+        self._logger.info("Training complete.")
 
-    def simulate(self):
-        self.world.enable_history()
+    def evaluate(self, save_history: bool = False):
+        if save_history:
+            self.world.enable_history()
         self.world.reset()
-        
+
         # Initialize the environment and get it's state
         state = self.world.get_observation()
-        state = torch.tensor(
-            state, dtype=torch.float32, device=self.device
-        ).unsqueeze(0)
+        state = torch.tensor(state, dtype=torch.float32, device=self.device).unsqueeze(
+            0
+        )
         step_pbar = tqdm(range(self.hyperparameters.max_steps_per_episode))
         episode_reward = 0
         for t in step_pbar:
-            action = self.select_action(state, training=False)
-            step_parameters = self.world.step(
-                self.world.action_space(action.item())
-            )
+            with torch.no_grad():
+                action = self.select_action(state, training=False)
+            step_parameters = self.world.step(self.world.action_space(action.item()))
             reward = torch.tensor([step_parameters.reward], device=self.device)
             # done = step_parameters.terminated or step_parameters.truncated
 
@@ -266,6 +272,8 @@ class AgentTrainer:
             # Move to the next state
             state = next_state
             episode_reward += reward.item()
-            step_pbar.set_description(f"Step {t}")
+            step_pbar.set_description(f"Eval | Step {t}")
         
-        self.world.save_history()
+        if save_history:
+            self.world.save_history()
+        self._logger.info(f"Evaluation rewards: {episode_reward}")

@@ -211,22 +211,22 @@ class BasicAgentWorld(BaseWorld):
         self.action_space = actions.DiscreteMoveActions
 
         # Set up events
-        self.add_tick_event(events.EventType.SPAWN_FOOD_EVENT, 10)
+        self.add_tick_event(events.EventType.SPAWN_FOOD_EVENT, 20)
 
     def _init(self) -> None:
         # Create initial entities
         self.food_group = entities.EntityGroup(
             [
-                entities.Food(math_utils.Vector2D(50, 30), 0, self._history),
-                entities.Food(math_utils.Vector2D(50, 20), 0, self._history),
-                entities.Food(math_utils.Vector2D(50, 10), 0, self._history),
+                entities.Food(math_utils.Vector2D(50, 60), 0, self._history),
+                entities.Food(math_utils.Vector2D(50, 50), 0, self._history),
+                entities.Food(math_utils.Vector2D(50, 40), 0, self._history),
             ],
             "food_group",
         )
         self.add_entities_group(self.food_group)
 
         self.agent = entities.Creature(
-            math_utils.Vector2D(10.0, 10.0),
+            math_utils.Vector2D(10.0, 50.0),
             math_utils.Vector2D(1.0, 0.0),
             0,
             self._history,
