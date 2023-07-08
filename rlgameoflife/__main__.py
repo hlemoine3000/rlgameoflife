@@ -7,6 +7,7 @@ import tqdm
 from rlgameoflife import worlds
 from rlgameoflife import visualisation
 from rlgameoflife import agent
+from rlgameoflife import optuna_trainer
 
 
 DEFAULT_OUTPUT_DIRECTORY = "outputs"
@@ -58,6 +59,7 @@ def argument_parser():
         "-l", "--last", help="Visualize last simulation.", action="store_true"
     )
     parser.add_argument("-t", "--train", help="Train agents.", action="store_true")
+    parser.add_argument("-p", "--optuna", help="Train agents with optuna optimization.", action="store_true")
 
     return parser
 
@@ -78,6 +80,11 @@ def main():
         agent_trainer = agent.AgentTrainer(agent.AgentTrainerParameters())
         agent_trainer.train()
         agent_trainer.evaluate()
+        return
+    
+    if args.optuna:
+        agent_trainer = optuna_trainer.OptunaAgentTrainer()
+        agent_trainer.optimize()
         return
 
     if args.simulate:
