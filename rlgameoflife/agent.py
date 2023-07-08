@@ -74,7 +74,7 @@ class AgentTrainer:
             self.world_parameters.boundaries,
             disable_history=True,
         )
-        self.device = torch.device("cpu")
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         # Get number of actions from gym action space
         n_actions = len(self.world.action_space)
@@ -175,17 +175,17 @@ class AgentTrainer:
 
         return loss.item()
 
-    def train(self):
+    def train(self, save_final_eval: bool = True):
         episode_bar = tqdm(range(self.hyperparameters.num_episodes))
+        eval_rewards = None
         for episode in episode_bar:
             # Initialize the environment and get it's state
             state = self.world.get_observation()
             state = torch.tensor(
                 state, dtype=torch.float32, device=self.device
             ).unsqueeze(0)
-            step_pbar = tqdm(range(self.hyperparameters.max_steps_per_episode))
             self.policy_net.train()
-            for t in step_pbar:
+            for t in range(self.hyperparameters.max_steps_per_episode):
                 action = self.select_action(state)
                 step_parameters = self.world.step(
                     self.world.action_space(action.item())
@@ -223,20 +223,18 @@ class AgentTrainer:
                     )
                 self.target_net.load_state_dict(target_net_state_dict)
 
-                step_pbar.set_description(
-                    f"Train | Step {t} / {self.hyperparameters.max_steps_per_episode}"
+                episode_bar.set_description(
+                    f"Train | Episode {episode} | Step {t} / {self.hyperparameters.max_steps_per_episode} | Eval reward {eval_rewards}"
                 )
 
             if (
-                episode % self.hyperparameters.eval_each_n_episode == 0
+                self.hyperparameters.eval_each_n_episode > 0
+                and episode % self.hyperparameters.eval_each_n_episode == 0
                 and episode != self.hyperparameters.num_episodes - 1
             ):
-                self.evaluate()
+                eval_rewards = self.evaluate()
             self.world.reset()
-            episode_bar.set_description(
-                f"Train | Episode {episode} / {self.hyperparameters.num_episodes}"
-            )
-        final_rewards = self.evaluate(save_history=True)
+        final_rewards = self.evaluate(save_history=save_final_eval)
         self._logger.info("Training complete.")
         return final_rewards
 
@@ -252,13 +250,14 @@ class AgentTrainer:
         state = torch.tensor(state, dtype=torch.float32, device=self.device).unsqueeze(
             0
         )
-        step_pbar = tqdm(range(self.hyperparameters.max_steps_per_episode))
         episode_reward = 0
         self.policy_net.eval()
-        for t in step_pbar:
+        for t in range(self.hyperparameters.max_steps_per_episode):
             with torch.no_grad():
                 action = self.select_action(state, training=False)
-            step_parameters = self.eval_world.step(self.eval_world.action_space(action.item()))
+            step_parameters = self.eval_world.step(
+                self.eval_world.action_space(action.item())
+            )
             # done = step_parameters.terminated or step_parameters.truncated
 
             if step_parameters.terminated:
@@ -273,8 +272,6 @@ class AgentTrainer:
             # Move to the next state
             state = next_state
             episode_reward += step_parameters.reward
-            step_pbar.set_description(f"Eval | Step {t}")
 
         self.eval_world.save_history()
-        self._logger.info(f"Evaluation rewards: {episode_reward}")
         return episode_reward
