@@ -7,26 +7,11 @@ import random
 from tqdm import tqdm
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import torch.optim as optim
 
 from rlgameoflife import worlds
 from rlgameoflife import actions
-
-
-class DQN(nn.Module):
-    def __init__(self, n_observations, n_actions):
-        super(DQN, self).__init__()
-        self.layer1 = nn.Linear(n_observations, 64)
-        self.layer2 = nn.Linear(64, 64)
-        self.layer3 = nn.Linear(64, n_actions)
-
-    # Called with either one element to determine next action, or a batch
-    # during optimization. Returns tensor([[left0exp,right0exp]...]).
-    def forward(self, x):
-        x = F.relu(self.layer1(x))
-        x = F.relu(self.layer2(x))
-        return F.tanh(self.layer3(x))
+from rlgameoflife import models
 
 
 Transition = namedtuple("Transition", ("state", "action", "next_state", "reward"))
@@ -60,9 +45,10 @@ class AgentTrainerParameters:
     eps_decay: int = 1000  # controls the rate of exponential decay of epsilon, higher means a slower decay
     tau: float = 0.005  # is the update rate of the target network
     lr: float = 1e-4  # is the learning rate of the AdamW optimizer
-    num_episodes: int = 10
+    num_episodes: int = 60
     max_steps_per_episode: int = 400
     eval_each_n_episode: int = 5
+    replay_memory_size: int = 10000
 
 
 class WorldParameters:
@@ -71,12 +57,18 @@ class WorldParameters:
 
 
 class AgentTrainer:
-    def __init__(self) -> None:
+    def __init__(self, agent_parameters: AgentTrainerParameters) -> None:
         self._logger = logging.getLogger(__class__.__name__)
         self.world_parameters = WorldParameters()
-        self.hyperparameters = AgentTrainerParameters()
+        self.hyperparameters = agent_parameters
 
         self.world = worlds.BasicAgentWorld(
+            self.world_parameters.max_ticks,
+            "outputs",
+            self.world_parameters.boundaries,
+            disable_history=True,
+        )
+        self.eval_world = worlds.BasicEvalWorldAgent(
             self.world_parameters.max_ticks,
             "outputs",
             self.world_parameters.boundaries,
@@ -90,14 +82,14 @@ class AgentTrainer:
         observation = self.world.get_observation()
         n_observations = observation.shape[0]
 
-        self.policy_net = DQN(n_observations, n_actions).to(self.device)
-        self.target_net = DQN(n_observations, n_actions).to(self.device)
+        self.policy_net = models.DQN(n_observations, n_actions).to(self.device)
+        self.target_net = models.DQN(n_observations, n_actions).to(self.device)
         self.target_net.load_state_dict(self.policy_net.state_dict())
 
         self.optimizer = optim.AdamW(
             self.policy_net.parameters(), lr=self.hyperparameters.lr, amsgrad=True
         )
-        self.memory = ReplayMemory(1000)
+        self.memory = ReplayMemory(self.hyperparameters.replay_memory_size)
 
         self.steps_done = 0
 
@@ -192,6 +184,7 @@ class AgentTrainer:
                 state, dtype=torch.float32, device=self.device
             ).unsqueeze(0)
             step_pbar = tqdm(range(self.hyperparameters.max_steps_per_episode))
+            self.policy_net.train()
             for t in step_pbar:
                 action = self.select_action(state)
                 step_parameters = self.world.step(
@@ -231,33 +224,41 @@ class AgentTrainer:
                 self.target_net.load_state_dict(target_net_state_dict)
 
                 step_pbar.set_description(
-                    f"Train | Step {t}"
+                    f"Train | Step {t} / {self.hyperparameters.max_steps_per_episode}"
                 )
 
-            if episode % self.hyperparameters.eval_each_n_episode == 0:
+            if (
+                episode % self.hyperparameters.eval_each_n_episode == 0
+                and episode != self.hyperparameters.num_episodes - 1
+            ):
                 self.evaluate()
             self.world.reset()
-            episode_bar.set_description(f"Train | Episode {episode}")
-        self.evaluate(save_history=True)
+            episode_bar.set_description(
+                f"Train | Episode {episode} / {self.hyperparameters.num_episodes}"
+            )
+        final_rewards = self.evaluate(save_history=True)
         self._logger.info("Training complete.")
+        return final_rewards
 
-    def evaluate(self, save_history: bool = False):
+    def evaluate(self, save_history: bool = False) -> int:
         if save_history:
-            self.world.enable_history()
-        self.world.reset()
+            self.eval_world.enable_history()
+        else:
+            self.eval_world.disable_history()
+        self.eval_world.reset()
 
         # Initialize the environment and get it's state
-        state = self.world.get_observation()
+        state = self.eval_world.get_observation()
         state = torch.tensor(state, dtype=torch.float32, device=self.device).unsqueeze(
             0
         )
         step_pbar = tqdm(range(self.hyperparameters.max_steps_per_episode))
         episode_reward = 0
+        self.policy_net.eval()
         for t in step_pbar:
             with torch.no_grad():
                 action = self.select_action(state, training=False)
-            step_parameters = self.world.step(self.world.action_space(action.item()))
-            reward = torch.tensor([step_parameters.reward], device=self.device)
+            step_parameters = self.eval_world.step(self.eval_world.action_space(action.item()))
             # done = step_parameters.terminated or step_parameters.truncated
 
             if step_parameters.terminated:
@@ -271,9 +272,9 @@ class AgentTrainer:
 
             # Move to the next state
             state = next_state
-            episode_reward += reward.item()
+            episode_reward += step_parameters.reward
             step_pbar.set_description(f"Eval | Step {t}")
-        
-        if save_history:
-            self.world.save_history()
+
+        self.eval_world.save_history()
         self._logger.info(f"Evaluation rewards: {episode_reward}")
+        return episode_reward

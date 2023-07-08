@@ -75,7 +75,7 @@ def main():
     main_logger.addHandler(tqdm_handler)
 
     if args.train:
-        agent_trainer = agent.AgentTrainer()
+        agent_trainer = agent.AgentTrainer(agent.AgentTrainerParameters())
         agent_trainer.train()
         agent_trainer.evaluate()
         return
