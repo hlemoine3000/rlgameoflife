@@ -4,3 +4,5 @@ parameterized>=0.8.1
 pytest>=7.2.1
 tqdm>=4.64.1
 optuna>=3.2.0
+optuna-dashboard>=0.10.3
+plotly>=5.15.0

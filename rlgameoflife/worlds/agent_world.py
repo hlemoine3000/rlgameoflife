@@ -103,12 +103,20 @@ class BasicEvalWorldAgent(BasicAgentWorld):
         # Create initial entities
         self.food_group = entities.EntityGroup(
             [
+                entities.Food(math_utils.Vector2D(30, 20), 0, self._history),
+                entities.Food(math_utils.Vector2D(30, 80), 0, self._history),
                 entities.Food(math_utils.Vector2D(40, 60), 0, self._history),
                 entities.Food(math_utils.Vector2D(40, 40), 0, self._history),
+                entities.Food(math_utils.Vector2D(50, 20), 0, self._history),
+                entities.Food(math_utils.Vector2D(50, 80), 0, self._history),
                 entities.Food(math_utils.Vector2D(60, 40), 0, self._history),
                 entities.Food(math_utils.Vector2D(60, 60), 0, self._history),
+                entities.Food(math_utils.Vector2D(70, 20), 0, self._history),
+                entities.Food(math_utils.Vector2D(70, 80), 0, self._history),
                 entities.Food(math_utils.Vector2D(80, 40), 0, self._history),
                 entities.Food(math_utils.Vector2D(80, 60), 0, self._history),
+                
+                
             ],
             "food_group",
         )
